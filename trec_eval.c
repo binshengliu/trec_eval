@@ -137,7 +137,7 @@ static int mark_measure (EPI *epi, char *optarg);
 static int trec_eval_help(EPI *epi);
 static void get_debug_level_query (EPI *epi, char *optarg);
 static int cleanup (EPI *epi);
-
+static int qid_cmp(const char *qrel_qid, const char *run_qid, long match_prefix);
 
 int
 main (argc, argv)
@@ -157,6 +157,7 @@ char *argv[];
     long i,j,m;
     int c;
     long help_wanted = 0;
+    long match_prefix = 0;
     long measure_marked_flag = 0;
 
 #ifdef MDEBUG
@@ -204,9 +205,10 @@ char *argv[];
 	    {"Results_format", 1, 0, 'T'},
 	    {"Output_old_results_format", 1, 0, 'o'},
 	    {"Zscore", 1, 0, 'Z'},
+	    {"match_prefix", 0, 0, 'p'},
 	    {0, 0, 0, 0},
 	};
-	c = getopt_long (argc, argv, "hvqm:cl:nD:JN:M:R:T:oZ:", 
+	c = getopt_long (argc, argv, "hvqm:cl:nD:JN:M:R:T:oZ:p",
 			 long_options, &option_index);
 	if (c == -1)
 	    break;
@@ -263,6 +265,9 @@ char *argv[];
 	    epi.zscore_flag++;
 	    zscores_file = optarg;
 	    break;
+          case 'p':
+            match_prefix++;
+            break;
 	case '?':
 	default:
 		(void) fputs (usage,stderr);
@@ -366,9 +371,10 @@ char *argv[];
 	    continue;
 	/* Find rel info for this query (skip if no rel info) */
 	for (j = 0; j < all_rel_info.num_q_rels; j++) {
-	    if (0 == strcmp (all_results.results[i].qid,
-			     all_rel_info.rel_info[j].qid))
+          if (0 == qid_cmp(all_results.results[i].qid,
+                           all_rel_info.rel_info[j].qid, match_prefix)) {
 		break;
+          }
 	}
 	if (j >= all_rel_info.num_q_rels)
 	    continue;
@@ -616,4 +622,23 @@ cleanup (EPI *epi)
 	    return (UNDEF);
     }
     return (1);
+}
+
+static int qid_cmp(const char *qrel_qid, const char *run_qid, long match_prefix) {
+  const char *p1 = qrel_qid;
+  const char *p2 = run_qid;
+  char c1, c2;
+
+  do {
+    c1 = *p1++;
+    c2 = *p2++;
+    if (match_prefix) {
+      c1 = isalnum(c1) ? c1 : '\0';
+      c2 = isalnum(c2) ? c2 : '\0';
+    }
+    if (c1 == '\0')
+      return c1 - c2;
+  } while (c1 == c2);
+
+  return c1 - c2;
 }
