@@ -13,6 +13,8 @@ The main differences to the original trec_eval:
 
 3. Accept stdin (specify "-") as run file input.
 
+4. Support Anserini 3-field format run file.
+
 ## Original README
 
 [README](README)

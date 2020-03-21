@@ -13,6 +13,8 @@
 #include <sys/types.h>
 
 #define BUFFERSIZE 4096
+#define FMT_TREC 0
+#define FMT_ANS 1
 
 /* Read all retrieved results information from trec_results_file.
 Read text tuples from trec_results_file of the form
@@ -40,7 +42,7 @@ typedef struct {
 
 static int parse_results_line (char **start_ptr, char **qid_ptr,
 			       char **docno_ptr, char **sim_ptr,
-			       char **run_id_ptr);
+			       char **run_id_ptr, int *run_type);
 
 static int comp_lines_qid_docno ();
 
@@ -68,6 +70,7 @@ te_get_trec_results (EPI *epi, char *text_results_file,
     size_t num_lines;
     long num_qid;
     char *run_id_ptr = NULL;
+    int run_type = FMT_TREC;
     /* current pointers into static pools above */
     RESULTS *q_results_ptr;
     TEXT_RESULTS_INFO *text_info_ptr;
@@ -135,7 +138,7 @@ te_get_trec_results (EPI *epi, char *text_results_file,
 	    continue;
 	}
 	if (UNDEF == parse_results_line (&ptr, &line_ptr->qid,&line_ptr->docno,
-					 &line_ptr->sim, &run_id_ptr)) {
+					 &line_ptr->sim, &run_id_ptr, &run_type)) {
 	    fprintf (stderr, "trec_eval.get_results: Malformed line %ld\n",
 		     (long) (line_ptr - lines + 1));
 	    return (UNDEF);
@@ -186,7 +189,12 @@ te_get_trec_results (EPI *epi, char *text_results_file,
 			   text_info_ptr};
 	}
 	text_results_ptr->docno = lines[i].docno;
-	text_results_ptr->sim = atof (lines[i].sim);
+        if (run_type == FMT_TREC) {
+          text_results_ptr->sim = atof (lines[i].sim);
+        } else {
+          /* Actually rank */
+          text_results_ptr->sim = -atof (lines[i].sim);
+        }
 	text_results_ptr++;
     }
     /* End last qid */
@@ -207,49 +215,68 @@ static int comp_lines_qid_docno (LINES *ptr1, LINES *ptr2)
     return (strcmp (ptr1->docno, ptr2->docno));
 }
 
+static int iseol(char c)
+{
+  return c == '\n' || c == '\r';
+}
+
 static int
 parse_results_line (char **start_ptr, char **qid_ptr, char **docno_ptr,
-		    char **sim_ptr, char **run_id_ptr)
+		    char **sim_ptr, char **run_id_ptr, int *run_type)
 {
     char *ptr = *start_ptr;
+    char *ptrs[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
+    int i;
 
-    /* Get qid */
-    *qid_ptr = ptr;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr == '\n')  return (UNDEF);
-    *ptr++ = '\0';
-    /* Skip iter */
-    while (*ptr != '\n' && isspace (*ptr)) ptr++;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr++ == '\n') return (UNDEF);
-    /* Get docno */
-    while (*ptr != '\n' && isspace (*ptr)) ptr++;
-    *docno_ptr = ptr;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr == '\n') return (UNDEF);
-    *ptr++ = '\0';
-    /* Skip rank */
-    while (*ptr != '\n' && isspace (*ptr)) ptr++;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr++ == '\n') return (UNDEF);
-    /* Get sim */
-    while (*ptr != '\n' && isspace (*ptr)) ptr++;
-    *sim_ptr = ptr;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr == '\n')return (UNDEF);
-    *ptr++ = '\0';
-    /* Get run_id */
-    while (*ptr != '\n' && isspace (*ptr)) ptr++;
-    if (*ptr == '\n') return (UNDEF);
-    *run_id_ptr = ptr;
-    while (! isspace (*ptr)) ptr++;
-    if (*ptr != '\n') {
-	/* Skip over rest of line */
-	*ptr++ = '\0';
-	while (*ptr != '\n') ptr++;
+    /* skip empty lines */
+    while (iseol(*ptr)) {
+      ptr++;
+    }
+
+    for (i = 0; i < sizeof(ptrs) / sizeof(ptrs[0]); i++) {
+      while (isblank(*ptr)) {
+        ptr++;
+      }
+      if (iseol(*ptr)) {
+        break;
+      }
+
+      ptrs[i] = ptr;
+
+      while (!isspace(*ptr)) {
+        ptr++;
+      }
+
+      /* Non eol space */
+      if (isblank(*ptr)) {
+        *ptr++ = '\0';
+        continue;
+      } else {
+        break;
+      }
+    }
+
+    /* There are more fields following, ignore. */
+    while (*ptr != '\n') {
+      ptr++;
     }
     *ptr++ = '\0';
     *start_ptr = ptr;
+
+    if (ptrs[2] != NULL && ptrs[3] == NULL) {
+      *qid_ptr = ptrs[0];
+      *docno_ptr = ptrs[1];
+      *sim_ptr = ptrs[2];
+      *run_type = FMT_ANS;
+    } else if (ptrs[5] != NULL) {
+      *qid_ptr = ptrs[0];
+      *docno_ptr = ptrs[2];
+      *sim_ptr = ptrs[4];
+      *run_type = FMT_TREC;
+    } else {
+      return UNDEF;
+    }
+
     return (0);
 }
 
