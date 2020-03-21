@@ -4,3 +4,4 @@ trec_eval.*/
 .DS_Store
 test.long
 trec_eval
+compile_commands.json
