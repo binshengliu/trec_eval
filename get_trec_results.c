@@ -12,6 +12,8 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#define BUFFERSIZE 4096
+
 /* Read all retrieved results information from trec_results_file.
 Read text tuples from trec_results_file of the form
      030  Q0  ZF08-175-870  0   4238   prise1
@@ -42,6 +44,7 @@ static int parse_results_line (char **start_ptr, char **qid_ptr,
 
 static int comp_lines_qid_docno ();
 
+int read_stdin(char **ptr, size_t *size);
 
 /* static pools of memory, allocated here and never changed.  
    Declared static so one day I can write a cleanup procedure to free them */
@@ -69,34 +72,41 @@ te_get_trec_results (EPI *epi, char *text_results_file,
     RESULTS *q_results_ptr;
     TEXT_RESULTS_INFO *text_info_ptr;
     TEXT_RESULTS *text_results_ptr;
-    
-    /* mmap entire file into memory and copy it into writable memory */
-    if (-1 == (fd = open (text_results_file, 0)) ||
-        0 >= (size = lseek (fd, 0L, 2)) ||
-        (char *) -1 == (orig_buf = (char *) mmap (0,
-						  (size_t) size,
-						  PROT_READ,
-						  MAP_SHARED,
-						  fd,
-						  (off_t) 0))) {
+
+    if (0 == strcmp(text_results_file, "-")) {
+      if (UNDEF == read_stdin(&trec_results_buf, &size)) {
+ 	fprintf (stderr, "trec_eval.get_results: Cannot copy results file stdin\n");
+        return (UNDEF);
+      }
+    } else {
+      /* mmap entire file into memory and copy it into writable memory */
+      if (-1 == (fd = open (text_results_file, 0)) ||
+          0 >= (size = lseek (fd, 0L, 2)) ||
+          (char *) -1 == (orig_buf = (char *) mmap (0,
+                                                    (size_t) size,
+                                                    PROT_READ,
+                                                    MAP_SHARED,
+                                                    fd,
+                                                    (off_t) 0))) {
 	fprintf (stderr,
 		 "trec_eval.get_results: Cannot read results file '%s'\n",
 		 text_results_file);
 	return (UNDEF);
-    }
-    if (NULL == (trec_results_buf = malloc ((size_t) size+2))) {
+      }
+      if (NULL == (trec_results_buf = malloc ((size_t) size+2))) {
 	fprintf (stderr,
 		 "trec_eval.get_results: Cannot copy results file '%s'\n",
 		 text_results_file);
 	return (UNDEF);
-    }
-    (void) memcpy (trec_results_buf, orig_buf, size);
-    if (-1 == munmap (orig_buf, size) ||
-	-1 == close (fd)) {
+      }
+      (void) memcpy (trec_results_buf, orig_buf, size);
+      if (-1 == munmap (orig_buf, size) ||
+          -1 == close (fd)) {
 	fprintf (stderr,
 		 "trec_eval.get_results: Cannot close results file '%s'\n",
 		 text_results_file);
 	return (UNDEF);
+      }
     }
 
     /* Append ending newline if not present, Append NULL terminator */
@@ -265,3 +275,25 @@ te_get_trec_results_cleanup ()
     return (1);
 }
 
+int
+read_stdin(char **ptr, size_t *size) {
+  char *buffer = malloc(BUFFERSIZE);
+  size_t capacity = BUFFERSIZE;
+  size_t len= 0;
+  size_t rsize = 0;
+  while ((rsize = fread(buffer + len, 1, capacity - len, stdin)) != 0) {
+    if (rsize == capacity - len) {
+      size_t new_capacity = capacity + BUFFERSIZE;
+      buffer = realloc(buffer, new_capacity);
+      if (!buffer) {
+        return (UNDEF);
+      }
+      capacity = new_capacity;
+    }
+
+    len += rsize;
+  }
+  *ptr = buffer;
+  *size = len;
+  return 0;
+}
