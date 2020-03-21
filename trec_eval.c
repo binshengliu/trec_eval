@@ -137,7 +137,7 @@ static int mark_measure (EPI *epi, char *optarg);
 static int trec_eval_help(EPI *epi);
 static void get_debug_level_query (EPI *epi, char *optarg);
 static int cleanup (EPI *epi);
-static int qid_cmp(const char *qrel_qid, const char *run_qid, long match_prefix);
+static char *qno_of_vno(const char *vno);
 
 int
 main (argc, argv)
@@ -154,7 +154,7 @@ char *argv[];
     EPI epi;              /* Eval parameter info */
     TREC_EVAL accum_eval;
     TREC_EVAL q_eval;
-    long i,j,m;
+    long i,m;
     int c;
     long help_wanted = 0;
     long match_prefix = 0;
@@ -370,14 +370,20 @@ char *argv[];
 	    strcmp (epi.debug_query, all_results.results[i].qid))
 	    continue;
 	/* Find rel info for this query (skip if no rel info) */
-	for (j = 0; j < all_rel_info.num_q_rels; j++) {
-          if (0 == qid_cmp(all_results.results[i].qid,
-                           all_rel_info.rel_info[j].qid, match_prefix)) {
-		break;
-          }
-	}
-	if (j >= all_rel_info.num_q_rels)
-	    continue;
+        REL_INFO *rel_info_ptr = NULL;
+        int error;
+        if (match_prefix) {
+          char *qid = qno_of_vno(all_results.results[i].qid);
+          error = hashmap_get(all_rel_info.map, qid, (void **)&rel_info_ptr);
+          free(qid);
+        } else {
+          error = hashmap_get(all_rel_info.map, all_results.results[i].qid,
+                              (void **)&rel_info_ptr);
+        }
+
+        if (MAP_OK != error) {
+          continue;
+        }
 
 	/* zero out all measures for new query */
 	for (m = 0; m < q_eval.num_values; m++)
@@ -388,7 +394,7 @@ char *argv[];
 	for (m = 0; m < te_num_trec_measures; m++) {
 	    if (MEASURE_REQUESTED(te_trec_measures[m])) {
 		if (UNDEF == te_trec_measures[m]->calc_meas (&epi,
-						    &all_rel_info.rel_info[j],
+						    rel_info_ptr,
 						    &all_results.results[i],
 						    te_trec_measures[m],
 						    &q_eval)) {
@@ -624,21 +630,12 @@ cleanup (EPI *epi)
     return (1);
 }
 
-static int qid_cmp(const char *qrel_qid, const char *run_qid, long match_prefix) {
-  const char *p1 = qrel_qid;
-  const char *p2 = run_qid;
-  char c1, c2;
+static char *qno_of_vno(const char *vno) {
+  const char *src = vno;
 
-  do {
-    c1 = *p1++;
-    c2 = *p2++;
-    if (match_prefix) {
-      c1 = isalnum(c1) ? c1 : '\0';
-      c2 = isalnum(c2) ? c2 : '\0';
-    }
-    if (c1 == '\0')
-      return c1 - c2;
-  } while (c1 == c2);
+  while (*src && isalnum(*src)) {
+    src++;
+  }
 
-  return c1 - c2;
+  return strndup(vno, src-vno);
 }

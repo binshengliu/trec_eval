@@ -20,7 +20,7 @@ CFLAGS   = -g -I$H  -Wall -DVERSIONID=\"$(VERSIONID)\"
 INSTALL = /bin/mv
 
 TOP_SRCS = trec_eval.c formats.c meas_init.c meas_acc.c meas_avg.c \
-	meas_print_single.c meas_print_final.c
+	meas_print_single.c meas_print_final.c hashmap.c
 
 FORMAT_SRCS = get_qrels.c get_trec_results.c get_prefs.c get_qrels_prefs.c \
 	get_qrels_jg.c form_res_rels.c form_res_rels_jg.c \
@@ -46,7 +46,7 @@ MEAS_SRCS =  measures.c  m_map.c m_P.c m_num_q.c m_num_ret.c m_num_rel.c \
 
 SRCS = $(TOP_SRCS) $(FORMAT_SRCS) $(MEAS_SRCS)
 
-SRCH = common.h trec_eval.h sysfunc.h functions.h trec_format.h 
+SRCH = common.h trec_eval.h sysfunc.h functions.h trec_format.h hashmap.h
 
 SRCOTHER = README Makefile test bpref_bug CHANGELOG windows
 

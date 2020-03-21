@@ -7,6 +7,8 @@
 #ifndef TRECEVALH
 #define TRECEVALH
 
+#include "hashmap.h"
+
 /* Static state info; set at beginning, possibly from program options, */
 /* but then remains constant throughout. */
 /* List of command line arguments giving individual measure parameters.
@@ -117,6 +119,7 @@ typedef struct {                    /* Overall relevance judgements */
     long num_q_rels;                /* Number of REL_INFO queries */
     long max_num_q_rels;            /* Num queries space reserved for */
     REL_INFO *rel_info;             /* Array of REL_INFO queries */
+    map_t map;
 } ALL_REL_INFO;
 
 /* Measure characteristics (how to print them, average them). */

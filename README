@@ -1,3 +1,15 @@
+The main differences to the original trec_eval:
+
+1. Add -p flag to match query variations. Query 301-1-1 can match 301
+   in qrels.
+
+2. Use hashmap for qrel lookup. The time evaluating a big run file of
+   48413347 lines (2.2GB) against a qrels file of 484177 lines reduces
+   from 40 minutes to 1 minute.
+
+3. Accept stdin (specify "-") as run file input.
+
+------------------------------------------------------------------------------
 trec_eval is the standard tool used by the TREC community for
 evaluating an ad hoc retrieval run, given the results file and a
 standard set of judged results.  
