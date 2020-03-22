@@ -13,6 +13,8 @@ The main differences to the original trec_eval:
 
 4. Support Anserini 3-field format run file.
 
+4. Support `recip_rank_cut`.
+
 ## Original README
 
 [README](README)
