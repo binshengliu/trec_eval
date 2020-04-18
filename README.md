@@ -15,6 +15,9 @@ The main differences to the original trec_eval:
 
 4. Support `recip_rank_cut`.
 
+5. Support large run files (MSMARCO train run ~8.9G, 500m
+   lines. Finished 12.6m).
+
 ## Original README
 
 [README](README)
