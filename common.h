@@ -29,9 +29,9 @@
  * Some useful macros for making malloc et al easier to use.
  * Macros handle the casting and the like that's needed.
  */
-#define Malloc(n,type) (type *) malloc( (unsigned) ((n)*sizeof(type)))
+#define Malloc(n,type) (type *) malloc( (size_t) ((n)*sizeof(type)))
 #define Realloc(loc,n,type) (type *) realloc( (char *)(loc), \
-                                              (unsigned) ((n)*sizeof(type)))
+                                              (size_t) ((n)*sizeof(type)))
 #define Free(loc) (void) free( (char *)(loc) )
 
 #endif /* COMMONH */
