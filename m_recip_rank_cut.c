@@ -28,7 +28,7 @@ TREC_MEAS te_meas_recip_rank_cut =
     doc, or the user only wants one relevant doc.\n\
     Cutoffs must be positive without duplicates\n\
     Default param: -m recip_rank_cut.5,10,15,20,30,100,200,500,1000\n",
-     te_init_meas_a_float_cut_long,
+     te_init_meas_a_double_cut_long,
      te_calc_recip_rank_cut,
      te_acc_meas_a_cut,
      te_calc_avg_meas_a_cut,
